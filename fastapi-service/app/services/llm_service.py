@@ -1,11 +1,18 @@
 """
 Sends retrieved context + the user's question to an LLM and returns the answer.
-Supports two interchangeable providers, selected via LLM_PROVIDER in .env:
+
+Built as a LangChain LCEL chain (ChatPromptTemplate | chat model | StrOutputParser)
+so the prompt, model, and output parsing are composable/swappable pieces rather than
+provider-specific request/response handling. Supports two interchangeable providers,
+selected via LLM_PROVIDER in .env:
   - "anthropic" (Claude, default)
   - "openai"
 """
 import logging
 from typing import List
+
+from langchain_core.output_parsers import StrOutputParser
+from langchain_core.prompts import ChatPromptTemplate
 
 from app.config import get_settings
 from app.exceptions import LlmServiceError
@@ -13,8 +20,9 @@ from app.exceptions import LlmServiceError
 logger = logging.getLogger(__name__)
 settings = get_settings()
 
-_anthropic_client = None
-_openai_client = None
+# Cache of built chains, keyed by provider name, so the underlying chat model client
+# is constructed once (mirrors the previous lazy-singleton client pattern).
+_chains = {}
 
 SYSTEM_PROMPT = (
     "You are a helpful assistant answering questions about a user-uploaded document. "
@@ -22,62 +30,48 @@ SYSTEM_PROMPT = (
     "say you don't have enough information in the document rather than guessing."
 )
 
+_PROMPT = ChatPromptTemplate.from_messages(
+    [
+        ("system", SYSTEM_PROMPT),
+        (
+            "human",
+            "Context from the document:\n\n{context}\n\n"
+            "Question: {question}\n\n"
+            "Answer using only the context above.",
+        ),
+    ]
+)
 
-def _build_user_message(question: str, context_chunks: List[str]) -> str:
-    context_block = "\n\n---\n\n".join(context_chunks) if context_chunks else "(no context retrieved)"
-    return (
-        f"Context from the document:\n\n{context_block}\n\n"
-        f"Question: {question}\n\n"
-        "Answer using only the context above."
-    )
+
+def _build_context_block(context_chunks: List[str]) -> str:
+    return "\n\n---\n\n".join(context_chunks) if context_chunks else "(no context retrieved)"
 
 
-def _get_anthropic_client():
-    global _anthropic_client
-    if _anthropic_client is None:
-        import anthropic
-
+def _build_chain(provider: str):
+    if provider == "anthropic":
         if not settings.anthropic_api_key:
             raise LlmServiceError("ANTHROPIC_API_KEY is not configured. Set it in fastapi-service/.env")
-        _anthropic_client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
-    return _anthropic_client
+        from langchain_anthropic import ChatAnthropic
 
-
-def _get_openai_client():
-    global _openai_client
-    if _openai_client is None:
-        import openai
-
+        llm = ChatAnthropic(model=settings.claude_model, api_key=settings.anthropic_api_key, max_tokens=1024)
+    elif provider == "openai":
         if not settings.openai_api_key:
             raise LlmServiceError("OPENAI_API_KEY is not configured. Set it in fastapi-service/.env")
-        _openai_client = openai.OpenAI(api_key=settings.openai_api_key)
-    return _openai_client
+        from langchain_openai import ChatOpenAI
+
+        llm = ChatOpenAI(model=settings.openai_model, api_key=settings.openai_api_key, max_tokens=1024)
+    else:
+        raise LlmServiceError(
+            f"Unknown LLM_PROVIDER '{settings.llm_provider}'. Set it to 'anthropic' or 'openai' in .env"
+        )
+
+    return _PROMPT | llm | StrOutputParser()
 
 
-def _ask_anthropic(question: str, context_chunks: List[str]) -> str:
-    client = _get_anthropic_client()
-    response = client.messages.create(
-        model=settings.claude_model,
-        max_tokens=1024,
-        system=SYSTEM_PROMPT,
-        messages=[{"role": "user", "content": _build_user_message(question, context_chunks)}],
-    )
-    answer = "".join(block.text for block in response.content if block.type == "text").strip()
-    return answer or "Claude did not return a text response."
-
-
-def _ask_openai(question: str, context_chunks: List[str]) -> str:
-    client = _get_openai_client()
-    response = client.chat.completions.create(
-        model=settings.openai_model,
-        max_tokens=1024,
-        messages=[
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": _build_user_message(question, context_chunks)},
-        ],
-    )
-    answer = (response.choices[0].message.content or "").strip()
-    return answer or "OpenAI did not return a text response."
+def _get_chain(provider: str):
+    if provider not in _chains:
+        _chains[provider] = _build_chain(provider)
+    return _chains[provider]
 
 
 def active_model_name() -> str:
@@ -87,16 +81,12 @@ def active_model_name() -> str:
 
 def generate_answer(question: str, context_chunks: List[str]) -> str:
     provider = settings.llm_provider.lower().strip()
+    context_block = _build_context_block(context_chunks)
 
     try:
-        if provider == "openai":
-            return _ask_openai(question, context_chunks)
-        elif provider == "anthropic":
-            return _ask_anthropic(question, context_chunks)
-        else:
-            raise LlmServiceError(
-                f"Unknown LLM_PROVIDER '{settings.llm_provider}'. Set it to 'anthropic' or 'openai' in .env"
-            )
+        chain = _get_chain(provider)
+        answer = chain.invoke({"question": question, "context": context_block}).strip()
+        return answer or f"{provider.title()} did not return a text response."
     except LlmServiceError:
         raise
     except Exception as exc:
