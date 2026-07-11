@@ -1,0 +1,22 @@
+# Java / Spring Boot
+springboot-service/target/
+springboot-service/uploaded_files/
+springboot-service/logs/
+
+# Python / FastAPI
+fastapi-service/venv/
+fastapi-service/__pycache__/
+fastapi-service/**/__pycache__/
+fastapi-service/.env
+fastapi-service/logs/
+fastapi-service/uploaded_files/
+
+# React
+react-ui/node_modules/
+react-ui/build/
+react-ui/.env.local
+
+# OS/editor
+.DS_Store
+.idea/
+.vscode/

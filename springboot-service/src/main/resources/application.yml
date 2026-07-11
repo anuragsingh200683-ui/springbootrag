@@ -1,0 +1,62 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: aiapp-springboot-service
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/ai_docs_db
+    username: ai_app_user
+    password: ai_app_password
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: none          # schema is managed by sql-scripts/init.sql
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+        jdbc:
+          time_zone: UTC
+
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      timeout: 2000ms
+
+  servlet:
+    multipart:
+      max-file-size: 25MB
+      max-request-size: 25MB
+
+# Basic auth credentials for the local API (change for anything beyond local dev)
+app:
+  security:
+    username: admin
+    password: changeme
+  storage:
+    upload-dir: ./uploaded_files
+  fastapi:
+    base-url: http://localhost:8000
+    timeout-ms: 60000
+  cache:
+    qa-ttl-seconds: 3600
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+logging:
+  level:
+    root: INFO
+    com.example.aiapp: DEBUG
+  file:
+    name: logs/springboot-service.log
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} %-5level [%thread] %logger{36} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss} %-5level [%thread] %logger{36} - %msg%n"

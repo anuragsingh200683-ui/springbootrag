@@ -1,0 +1,8 @@
+target/
+uploaded_files/
+logs/
+*.iml
+.idea/
+.vscode/
+.DS_Store
+HELP.md
