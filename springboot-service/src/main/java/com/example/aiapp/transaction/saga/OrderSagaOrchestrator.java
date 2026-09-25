@@ -5,12 +5,16 @@ import com.example.aiapp.transaction.service.InventoryService;
 import com.example.aiapp.transaction.service.OrderService;
 import com.example.aiapp.transaction.service.PaymentService;
 import com.example.aiapp.transaction.service.ShippingService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.util.UUID;
 
 @Service
 public class OrderSagaOrchestrator {
+
+    private static final Logger log = LoggerFactory.getLogger(OrderSagaOrchestrator.class);
 
     private final OrderService orderService;
     private final PaymentService paymentService;
@@ -59,36 +63,42 @@ public class OrderSagaOrchestrator {
 
         } catch (Exception e) {
 
-            compensate(orderId, paymentId, reservationId, shipmentId, e);
+            compensate(sagaId, orderId, paymentId, reservationId, shipmentId, e);
 
             throw e;
         }
     }
 
-    private void compensate(Long orderId, Long paymentId, Long reservationId, Long shipmentId, Exception cause) {
+    private void compensate(UUID sagaId, Long orderId, Long paymentId, Long reservationId, Long shipmentId,
+                             Exception cause) {
 
         try {
             shippingService.cancelShipment(shipmentId);
         } catch (Exception e) {
-            // retry / recovery
+            log.error("[saga={}] compensation FAILED: cancelShipment(shipmentId={}) - manual cleanup needed. "
+                    + "Original failure: {}", sagaId, shipmentId, cause.getMessage(), e);
         }
 
         try {
             inventoryService.releaseStock(reservationId);
         } catch (Exception e) {
-            // retry / recovery
+            log.error("[saga={}] compensation FAILED: releaseStock(reservationId={}) - manual cleanup needed. "
+                    + "Original failure: {}", sagaId, reservationId, cause.getMessage(), e);
         }
 
         try {
             paymentService.refund(paymentId);
         } catch (Exception e) {
-            // retry / recovery
+            log.error("[saga={}] compensation FAILED: refund(paymentId={}) - customer was charged and NOT "
+                    + "refunded, manual cleanup needed. Original failure: {}",
+                    sagaId, paymentId, cause.getMessage(), e);
         }
 
         try {
             orderService.cancelOrder(orderId, cause.getMessage());
         } catch (Exception e) {
-            // retry / recovery
+            log.error("[saga={}] compensation FAILED: cancelOrder(orderId={}) - manual cleanup needed. "
+                    + "Original failure: {}", sagaId, orderId, cause.getMessage(), e);
         }
     }
 }
