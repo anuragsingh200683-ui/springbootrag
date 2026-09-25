@@ -44,6 +44,14 @@ app:
     timeout-ms: 60000
   cache:
     qa-ttl-seconds: 3600
+  transaction:
+    shipping:
+      # ISO-3166 alpha-2 codes the demo carrier serves. Anything else makes
+      # scheduleShipment fail, which is how the compensation path is exercised.
+      serviceable-countries: IN,US,GB,DE
+    demo:
+      # Only consulted when the 'saga-demo' profile is active.
+      seed-data: true
 
 management:
   endpoints:
@@ -55,6 +63,7 @@ logging:
   level:
     root: INFO
     com.example.aiapp: DEBUG
+    com.example.aiapp.transaction: DEBUG
   file:
     name: logs/springboot-service.log
   pattern:

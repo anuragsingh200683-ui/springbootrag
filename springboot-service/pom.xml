@@ -76,6 +76,17 @@
             <artifactId>spring-boot-starter-actuator</artifactId>
         </dependency>
 
+        <!-- Lombok, used by the com.example.aiapp.transaction saga module's entities and
+             services. Version pinned explicitly to 1.18.46 because it is the first release
+             with Java 26 (class file version 70) support - the Boot parent's managed
+             version predates that fix. -->
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <version>1.18.46</version>
+            <optional>true</optional>
+        </dependency>
+
         <!-- Test -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -92,6 +103,14 @@
             <artifactId>reactor-test</artifactId>
             <scope>test</scope>
         </dependency>
+        <!-- In-memory database for the com.example.aiapp.transaction saga tests, so they
+             run without a live PostgreSQL. The saga tests boot a narrow slice context
+             (SagaTestConfig), not the full application. -->
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>
@@ -100,6 +119,23 @@
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+            <!-- Explicit annotation processor path for Lombok. Newer javac versions no
+                 longer reliably auto-discover annotation processors from the plain compile
+                 classpath, so this is declared explicitly rather than relying on the old
+                 implicit-discovery behavior. -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <annotationProcessorPaths>
+                        <path>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                            <version>1.18.46</version>
+                        </path>
+                    </annotationProcessorPaths>
+                </configuration>
             </plugin>
         </plugins>
     </build>
