@@ -19,7 +19,8 @@ import java.util.List;
 
 /**
  * Simple HTTP Basic security suitable for a local, single-user deployment.
- * CORS is opened up for the React dev server on http://localhost:3000.
+ * CORS is opened up for the React dev servers on http://localhost:3000 (aiapp)
+ * and http://localhost:5173 (ems-app).
  */
 @Configuration
 public class SecurityConfig {
@@ -52,6 +53,13 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/actuator/health", "/actuator/info").permitAll()
+                        // Employee Management System module (com.example.employeemanagement)
+                        // is intentionally unsecured per its own spec - does not affect the
+                        // existing document/QA endpoints below, which stay authenticated.
+                        .requestMatchers("/api/ems/**").permitAll()
+                        // "/swagger-ui.html" (the actual entry page, not just the /swagger-ui/**
+                        // static assets it redirects to) and "/v3/api-docs/**" for the raw spec.
+                        .requestMatchers("/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 .httpBasic(org.springframework.security.config.Customizer.withDefaults());
@@ -62,7 +70,8 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(List.of("http://localhost:3000"));
+        // localhost:3000 = existing CRA app (aiapp), localhost:5173 = new ems-app Vite dev server
+        configuration.setAllowedOrigins(List.of("http://localhost:3000", "http://localhost:5173"));
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
         configuration.setAllowCredentials(true);

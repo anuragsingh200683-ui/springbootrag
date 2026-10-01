@@ -1,11 +1,12 @@
 package com.example.aiapp.service;
 
-import com.example.aiapp.dto.FastApiProcessRequest;
-import com.example.aiapp.dto.FastApiProcessResponse;
 import com.example.aiapp.entity.Document;
 import com.example.aiapp.entity.DocumentStatus;
 import com.example.aiapp.exception.DocumentNotFoundException;
-import com.example.aiapp.exception.FastApiServiceException;
+import com.example.aiapp.exception.EmbeddingGenerationException;
+import com.example.aiapp.exception.PdfExtractionException;
+import com.example.aiapp.ingest.DocumentIngestionService;
+import com.example.aiapp.ingest.VectorStoreRepository;
 import com.example.aiapp.repository.DocumentRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,23 +23,24 @@ public class DocumentService {
 
     private final DocumentRepository documentRepository;
     private final FileStorageService fileStorageService;
-    private final FastApiClientService fastApiClientService;
+    private final DocumentIngestionService documentIngestionService;
+    private final VectorStoreRepository vectorStoreRepository;
 
     public DocumentService(DocumentRepository documentRepository,
                             FileStorageService fileStorageService,
-                            FastApiClientService fastApiClientService) {
+                            DocumentIngestionService documentIngestionService,
+                            VectorStoreRepository vectorStoreRepository) {
         this.documentRepository = documentRepository;
         this.fileStorageService = fileStorageService;
-        this.fastApiClientService = fastApiClientService;
+        this.documentIngestionService = documentIngestionService;
+        this.vectorStoreRepository = vectorStoreRepository;
     }
 
     /**
-     * Deliberately NOT @Transactional: this method saves to Postgres, then makes an
-     * external HTTP call to FastAPI, which uses its own separate database connection
-     * to insert rows referencing the same document_id. If this whole method were wrapped
-     * in one Spring-managed transaction, the initial insert wouldn't be committed (and
-     * therefore not visible to FastAPI's connection) until after the HTTP call returns,
-     * causing a foreign-key violation on the FastAPI side. Each repository.save() call
+     * Deliberately NOT @Transactional: PDF extraction/embedding/chunk insertion below
+     * runs its own separate JDBC statements (via VectorStoreRepository), and a failure
+     * partway through should still leave the document row updated with FAILED status
+     * rather than being rolled back together with it. Each repository.save() call
      * below is transactional on its own (via Spring Data JPA) and commits immediately.
      */
     public Document uploadAndProcess(MultipartFile file) {
@@ -60,16 +62,34 @@ public class DocumentService {
         document = documentRepository.save(document);
 
         try {
-            FastApiProcessResponse response = fastApiClientService.processDocument(
-                    new FastApiProcessRequest(documentId, filePath));
+            int chunkCount = documentIngestionService.process(documentId, filePath);
 
             document.setStatus(DocumentStatus.PROCESSED);
-            document.setChunkCount(response.getChunkCount());
+            document.setChunkCount(chunkCount);
             document.setErrorMessage(null);
-        } catch (FastApiServiceException e) {
+        } catch (PdfExtractionException | EmbeddingGenerationException e) {
+            // Only the specific, expected failure modes DocumentIngestionService.process()
+            // is documented to throw are caught here and recorded as an ordinary
+            // per-document failure (bad PDF, embedding API hiccup). A bare
+            // catch(RuntimeException) here previously also swallowed unrelated
+            // programming bugs and genuine setup/config problems (e.g. a
+            // NullPointerException, or a DataAccessException from a pgvector
+            // dimension mismatch) and mislabeled them the same way - see the
+            // catch(RuntimeException) below for how those are now handled instead.
             document.setStatus(DocumentStatus.FAILED);
-            document.setErrorMessage(e.getMessage());
-            log.error("Processing failed for document {}: {}", documentId, e.getMessage());
+            document.setErrorMessage(e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage());
+            log.error("Processing failed for document {}", documentId, e);
+        } catch (RuntimeException e) {
+            // Anything NOT in the expected-failure list above is a bug or a setup
+            // problem, not a normal ingestion failure - mark the document FAILED so
+            // it does not sit stuck in PROCESSING forever, but rethrow so it still
+            // surfaces loudly as a 500 via GlobalExceptionHandler's generic handler
+            // instead of being silently mislabeled as an ordinary per-document error.
+            document.setStatus(DocumentStatus.FAILED);
+            document.setErrorMessage("Unexpected error during processing - see server logs.");
+            documentRepository.save(document);
+            log.error("Unexpected error processing document {}", documentId, e);
+            throw e;
         }
 
         return documentRepository.save(document);
@@ -85,15 +105,20 @@ public class DocumentService {
     }
 
     /**
-     * Mirror of uploadAndProcess: tells FastAPI to drop the indexed chunks (best-effort),
-     * removes the stored PDF from disk, then deletes the metadata row. Deleting the row
-     * cascades to any remaining document_chunks at the Postgres level (ON DELETE CASCADE
-     * in sql-scripts/init.sql), so this stays correct even if the FastAPI call fails.
+     * Best-effort chunk cleanup, then removes the stored PDF from disk and the metadata
+     * row. Deleting the row also cascades to any remaining document_chunks at the
+     * Postgres level (ON DELETE CASCADE in sql-scripts/init.sql), so this stays correct
+     * even if the explicit chunk delete below fails.
      */
     public void deleteDocument(UUID documentId) {
         Document document = getByDocumentId(documentId);
 
-        fastApiClientService.deleteDocument(documentId);
+        try {
+            vectorStoreRepository.deleteByDocumentId(documentId);
+        } catch (RuntimeException e) {
+            log.warn("Failed to delete chunks for document {}; relying on cascade delete: {}",
+                    documentId, e.getMessage());
+        }
         fileStorageService.deleteFile(document.getFilePath());
         documentRepository.delete(document);
 

@@ -36,9 +36,21 @@ public class GlobalExceptionHandler {
         return build(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage(), req);
     }
 
-    @ExceptionHandler(FastApiServiceException.class)
-    public ResponseEntity<ErrorResponse> handleFastApiService(FastApiServiceException ex, HttpServletRequest req) {
-        log.error("FastAPI service error", ex);
+    @ExceptionHandler(NoRelevantContextException.class)
+    public ResponseEntity<ErrorResponse> handleNoRelevantContext(NoRelevantContextException ex, HttpServletRequest req) {
+        log.warn("No relevant context: {}", ex.getMessage());
+        return build(HttpStatus.NOT_FOUND, ex.getMessage(), req);
+    }
+
+    @ExceptionHandler(PdfExtractionException.class)
+    public ResponseEntity<ErrorResponse> handlePdfExtraction(PdfExtractionException ex, HttpServletRequest req) {
+        log.error("PDF extraction error", ex);
+        return build(HttpStatus.UNPROCESSABLE_ENTITY, ex.getMessage(), req);
+    }
+
+    @ExceptionHandler({EmbeddingGenerationException.class, LlmServiceException.class})
+    public ResponseEntity<ErrorResponse> handleAiServiceError(RuntimeException ex, HttpServletRequest req) {
+        log.error("AI service call failed", ex);
         return build(HttpStatus.BAD_GATEWAY, ex.getMessage(), req);
     }
 

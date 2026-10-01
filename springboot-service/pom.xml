@@ -28,12 +28,6 @@
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
 
-        <!-- WebClient for calling FastAPI -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-webflux</artifactId>
-        </dependency>
-
         <!-- Security -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -76,15 +70,38 @@
             <artifactId>spring-boot-starter-actuator</artifactId>
         </dependency>
 
-        <!-- Lombok, used by the com.example.aiapp.transaction saga module's entities and
-             services. Version pinned explicitly to 1.18.46 because it is the first release
-             with Java 26 (class file version 70) support - the Boot parent's managed
-             version predates that fix. -->
+        <!-- Lombok (used by the new com.example.employeemanagement (EMS) module only).
+             Version pinned explicitly to 1.18.46 because it is the first release with
+             Java 26 (class file version 70) support - the Boot parent's managed version
+             predates that fix. -->
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
             <version>1.18.46</version>
             <optional>true</optional>
+        </dependency>
+
+        <!-- OpenAPI / Swagger UI for the EMS module's REST endpoints -->
+        <dependency>
+            <groupId>org.springdoc</groupId>
+            <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+            <version>3.0.3</version>
+        </dependency>
+
+        <!-- Official OpenAI Java SDK: chat completions (incl. structured outputs / tool
+             calling) and embeddings, used by the in-process AI Document Q&A pipeline that
+             replaces the fastapi-service proxy calls. -->
+        <dependency>
+            <groupId>com.openai</groupId>
+            <artifactId>openai-java</artifactId>
+            <version>4.58.0</version>
+        </dependency>
+
+        <!-- PDF text extraction, replacing fastapi-service's pypdf. -->
+        <dependency>
+            <groupId>org.apache.pdfbox</groupId>
+            <artifactId>pdfbox</artifactId>
+            <version>3.0.7</version>
         </dependency>
 
         <!-- Test -->
@@ -93,22 +110,17 @@
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
-        <dependency>
-            <groupId>org.springframework.security</groupId>
-            <artifactId>spring-security-test</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>io.projectreactor</groupId>
-            <artifactId>reactor-test</artifactId>
-            <scope>test</scope>
-        </dependency>
         <!-- In-memory database for the com.example.aiapp.transaction saga tests, so they
              run without a live PostgreSQL. The saga tests boot a narrow slice context
              (SagaTestConfig), not the full application. -->
         <dependency>
             <groupId>com.h2database</groupId>
             <artifactId>h2</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-test</artifactId>
             <scope>test</scope>
         </dependency>
     </dependencies>
@@ -120,10 +132,10 @@
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
             </plugin>
-            <!-- Explicit annotation processor path for Lombok. Newer javac versions no
-                 longer reliably auto-discover annotation processors from the plain compile
-                 classpath, so this is declared explicitly rather than relying on the old
-                 implicit-discovery behavior. -->
+            <!-- Explicit annotation processor path for Lombok (com.example.employeemanagement
+                 module only). Newer javac versions no longer reliably auto-discover annotation
+                 processors from the plain compile classpath, so this is declared explicitly
+                 rather than relying on the old implicit-discovery behavior. -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
