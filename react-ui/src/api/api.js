@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const BASE_URL = process.env.REACT_APP_API_BASE_URL || "http://localhost:8080";
+const BASE_URL = process.env.REACT_APP_API_BASE_URL || "http://localhost:8090";
 const USERNAME = process.env.REACT_APP_API_USERNAME || "admin";
 const PASSWORD = process.env.REACT_APP_API_PASSWORD || "changeme";
 

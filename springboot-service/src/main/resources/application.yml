@@ -1,5 +1,5 @@
 server:
-  port: 8080
+  port: 8090
 
 spring:
   application:
@@ -13,7 +13,25 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: none          # schema is managed by sql-scripts/init.sql
+      # IMPORTANT: ddl-auto is a single global setting for the whole persistence unit -
+      # Hibernate does NOT scope it per package or per entity. It applies equally to
+      # com.example.aiapp.entity, com.example.aiapp.transaction.entity, and
+      # com.example.employeemanagement, all of which are on @EntityScan together
+      # (see AiAppApplication.java).
+      #
+      # 'update' is safe today only because of how each group's schema is actually
+      # sourced, not because of any scoping:
+      #   - aiapp entities (Document, QaHistory) are mapped to match the tables
+      #     sql-scripts/init.sql already creates by hand, so 'update' finds nothing to
+      #     change and is a no-op for them.
+      #   - com.example.aiapp.transaction entities have no init.sql definition at all -
+      #     they rely entirely on 'update' to create their tables.
+      #   - com.example.employeemanagement (EMS) entities are the same: Hibernate-only,
+      #     no init.sql definitions.
+      # If an aiapp/transaction entity mapping is ever changed without updating
+      # sql-scripts/init.sql to match, Hibernate will silently ALTER those hand-managed
+      # tables on next startup instead of failing loudly - keep the two in sync by hand.
+      ddl-auto: update
     show-sql: false
     properties:
       hibernate:
@@ -44,6 +62,15 @@ app:
     timeout-ms: 60000
   cache:
     qa-ttl-seconds: 3600
+  openai:
+    # Must be set as a real environment variable - never commit a live key here.
+    api-key: ${OPENAI_API_KEY:}
+    chat-model: gpt-4o-mini
+    embedding-model: text-embedding-3-small
+  qa:
+    chunk-size: 1000
+    chunk-overlap: 150
+    top-k: 4
   transaction:
     shipping:
       # ISO-3166 alpha-2 codes the demo carrier serves. Anything else makes

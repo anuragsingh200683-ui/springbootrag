@@ -39,6 +39,15 @@ class Settings(BaseSettings):
     # Logging
     log_level: str = "INFO"
 
+    # Feature flag for the LangGraph orchestration layer (app/langgraph/).
+    # true  -> /api/qa/query routes through the classifier/RAG/database/
+    #          rest_api/tool/general LangGraph workflow (OpenAI-only nodes).
+    # false -> instantly reverts to the pre-LangGraph direct
+    #          embed -> search -> generate_answer chain (respects
+    #          LLM_PROVIDER, i.e. Anthropic or OpenAI) - zero other code
+    #          changes needed for rollback.
+    use_langgraph: bool = True
+
 
 @lru_cache
 def get_settings() -> Settings:
