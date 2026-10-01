@@ -4,6 +4,7 @@ import UploadDocument from "./components/UploadDocument";
 import DocumentList from "./components/DocumentList";
 import ChatBox from "./components/ChatBox";
 import { listDocuments } from "./api/api";
+import { getUsername, isAdmin, logout } from "./auth/keycloak";
 
 function App() {
   const [documents, setDocuments] = useState([]);
@@ -39,6 +40,15 @@ function App() {
   return (
     <div className="app">
       <header className="app-header">
+        <div className="user-bar">
+          <span className="muted">
+            Signed in as <strong>{getUsername()}</strong>
+            {isAdmin() ? " (admin)" : ""}
+          </span>
+          <button type="button" onClick={logout}>
+            Log out
+          </button>
+        </div>
         <h1>AI Document Q&amp;A</h1>
         <p className="muted">Upload a PDF, then ask questions answered by Claude using semantic search.</p>
       </header>

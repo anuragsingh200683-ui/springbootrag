@@ -9,6 +9,7 @@ import DeleteIcon from '@mui/icons-material/Delete'
 import { listDesignations, createDesignation, updateDesignation, deleteDesignation } from '../../api/designationApi.js'
 import DesignationFormDialog from './DesignationFormDialog.jsx'
 import ConfirmDialog from '../common/ConfirmDialog.jsx'
+import { isAdmin } from '../../auth/keycloak.js'
 
 export default function DesignationPage() {
   const [designations, setDesignations] = useState([])
@@ -17,6 +18,8 @@ export default function DesignationPage() {
   const [editing, setEditing] = useState(null)
   const [deleteTarget, setDeleteTarget] = useState(null)
   const [snackbar, setSnackbar] = useState(null)
+  // Create/edit/delete are ADMIN-only on the API; hide them from everyone else.
+  const admin = isAdmin()
 
   const load = useCallback(() => {
     setLoading(true)
@@ -62,7 +65,7 @@ export default function DesignationPage() {
     <Box>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
         <Typography variant="h5">Designations</Typography>
-        <Button variant="contained" startIcon={<AddIcon />} onClick={handleAdd}>Add Designation</Button>
+        {admin && <Button variant="contained" startIcon={<AddIcon />} onClick={handleAdd}>Add Designation</Button>}
       </Box>
 
       <Paper>
@@ -90,12 +93,16 @@ export default function DesignationPage() {
                     <TableCell>{designation.name}</TableCell>
                     <TableCell>{designation.description}</TableCell>
                     <TableCell align="right">
-                      <IconButton size="small" onClick={() => handleEdit(designation)}>
-                        <EditIcon fontSize="small" />
-                      </IconButton>
-                      <IconButton size="small" onClick={() => setDeleteTarget(designation)}>
-                        <DeleteIcon fontSize="small" />
-                      </IconButton>
+                      {admin && (
+                        <>
+                          <IconButton size="small" onClick={() => handleEdit(designation)}>
+                            <EditIcon fontSize="small" />
+                          </IconButton>
+                          <IconButton size="small" onClick={() => setDeleteTarget(designation)}>
+                            <DeleteIcon fontSize="small" />
+                          </IconButton>
+                        </>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))

@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { deleteDocument } from "../api/api";
+import { isAdmin } from "../auth/keycloak";
 
 export default function DocumentList({ documents, selectedDocumentId, onSelect, onDeleted }) {
   const [deletingId, setDeletingId] = useState(null);
@@ -61,14 +62,17 @@ export default function DocumentList({ documents, selectedDocumentId, onSelect, 
               <span className={`status status-${doc.status.toLowerCase()}`}>{doc.status}</span>
               {doc.chunkCount ? <span className="muted"> ({doc.chunkCount} chunks)</span> : null}
             </label>
-            <button
-              type="button"
-              className="delete-btn"
-              onClick={() => handleDelete(doc)}
-              disabled={deletingId === doc.documentId}
-            >
-              {deletingId === doc.documentId ? "Deleting..." : "Delete"}
-            </button>
+            {/* Deleting documents is ADMIN-only on the API; hide it from everyone else. */}
+            {isAdmin() && (
+              <button
+                type="button"
+                className="delete-btn"
+                onClick={() => handleDelete(doc)}
+                disabled={deletingId === doc.documentId}
+              >
+                {deletingId === doc.documentId ? "Deleting..." : "Delete"}
+              </button>
+            )}
           </li>
         ))}
       </ul>

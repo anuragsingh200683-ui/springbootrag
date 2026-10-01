@@ -15,6 +15,7 @@ import { listDesignations } from '../../api/designationApi.js'
 import EmployeeFormDialog from './EmployeeFormDialog.jsx'
 import ConfirmDialog from '../common/ConfirmDialog.jsx'
 import StatusChip from '../common/StatusChip.jsx'
+import { isAdmin } from '../../auth/keycloak.js'
 
 const SORTABLE_COLUMNS = [
   { key: 'firstName', label: 'Name' },
@@ -47,6 +48,8 @@ export default function EmployeePage() {
   const [editing, setEditing] = useState(null)
   const [deleteTarget, setDeleteTarget] = useState(null)
   const [snackbar, setSnackbar] = useState(null)
+  // Create/edit/delete are ADMIN-only on the API; hide them from everyone else.
+  const admin = isAdmin()
 
   useEffect(() => {
     listDepartments().then(setDepartments).catch(() => setDepartments([]))
@@ -115,7 +118,7 @@ export default function EmployeePage() {
     <Box>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
         <Typography variant="h5">Employees</Typography>
-        <Button variant="contained" startIcon={<AddIcon />} onClick={handleAdd}>Add Employee</Button>
+        {admin && <Button variant="contained" startIcon={<AddIcon />} onClick={handleAdd}>Add Employee</Button>}
       </Box>
 
       <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ mb: 2 }}>
@@ -185,8 +188,12 @@ export default function EmployeePage() {
                     <TableCell>{emp.department?.name}</TableCell>
                     <TableCell>{emp.designation?.name}</TableCell>
                     <TableCell align="right">
-                      <IconButton size="small" onClick={() => handleEdit(emp)}><EditIcon fontSize="small" /></IconButton>
-                      <IconButton size="small" onClick={() => setDeleteTarget(emp)}><DeleteIcon fontSize="small" /></IconButton>
+                      {admin && (
+                        <>
+                          <IconButton size="small" onClick={() => handleEdit(emp)}><EditIcon fontSize="small" /></IconButton>
+                          <IconButton size="small" onClick={() => setDeleteTarget(emp)}><DeleteIcon fontSize="small" /></IconButton>
+                        </>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))

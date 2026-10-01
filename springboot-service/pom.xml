@@ -33,6 +33,12 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-security</artifactId>
         </dependency>
+        <!-- JWT bearer-token validation: this service is an OAuth2 Resource Server only.
+             Users/passwords live in the external auth server (Keycloak), never here. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-oauth2-resource-server</artifactId>
+        </dependency>
 
         <!-- JPA + PostgreSQL -->
         <dependency>
