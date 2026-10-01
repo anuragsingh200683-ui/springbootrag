@@ -22,10 +22,7 @@ react-ui/.env.local
 .vscode/
 
 # Local scratch / notes (not part of the app)
-springboot-service/src/main/java/com/example/Employee.java
-springboot-service/src/main/java/com/example/Test.java
-springboot-service/src/main/java/com/example/TestBigInt.java
-springboot-service/src/main/java/com/example/askjava/
+springboot-service/scratch/
 /page-*.jpg
 /rag_langchain_architecture.docx
 /rag_langchain_architecture.pdf
