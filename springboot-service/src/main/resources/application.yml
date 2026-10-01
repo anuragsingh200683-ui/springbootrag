@@ -50,11 +50,21 @@ spring:
       max-file-size: 25MB
       max-request-size: 25MB
 
-# Basic auth credentials for the local API (change for anything beyond local dev)
+  # This service only validates JWTs issued by the external auth server (Keycloak realm
+  # 'aiapp', see keycloak/README.md). Signing keys are fetched from the issuer's JWKS
+  # endpoint and cached; iss, aud and exp/nbf are checked on every request.
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${AUTH_ISSUER_URI:http://localhost:8180/realms/aiapp}
+          audiences: aiapp-api
+
 app:
   security:
-    username: admin
-    password: changeme
+    jwt:
+      # Dot-path of the claim holding role names; each becomes ROLE_<name>.
+      roles-claim: realm_access.roles
   storage:
     upload-dir: ./uploaded_files
   fastapi:

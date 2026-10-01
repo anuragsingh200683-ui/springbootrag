@@ -9,6 +9,7 @@ import DeleteIcon from '@mui/icons-material/Delete'
 import { listDepartments, createDepartment, updateDepartment, deleteDepartment } from '../../api/departmentApi.js'
 import DepartmentFormDialog from './DepartmentFormDialog.jsx'
 import ConfirmDialog from '../common/ConfirmDialog.jsx'
+import { isAdmin } from '../../auth/keycloak.js'
 
 export default function DepartmentPage() {
   const [departments, setDepartments] = useState([])
@@ -17,6 +18,8 @@ export default function DepartmentPage() {
   const [editing, setEditing] = useState(null)
   const [deleteTarget, setDeleteTarget] = useState(null)
   const [snackbar, setSnackbar] = useState(null)
+  // Create/edit/delete are ADMIN-only on the API; hide them from everyone else.
+  const admin = isAdmin()
 
   const load = useCallback(() => {
     setLoading(true)
@@ -62,7 +65,7 @@ export default function DepartmentPage() {
     <Box>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
         <Typography variant="h5">Departments</Typography>
-        <Button variant="contained" startIcon={<AddIcon />} onClick={handleAdd}>Add Department</Button>
+        {admin && <Button variant="contained" startIcon={<AddIcon />} onClick={handleAdd}>Add Department</Button>}
       </Box>
 
       <Paper>
@@ -92,12 +95,16 @@ export default function DepartmentPage() {
                     <TableCell>{dept.name}</TableCell>
                     <TableCell>{dept.description}</TableCell>
                     <TableCell align="right">
-                      <IconButton size="small" onClick={() => handleEdit(dept)}>
-                        <EditIcon fontSize="small" />
-                      </IconButton>
-                      <IconButton size="small" onClick={() => setDeleteTarget(dept)}>
-                        <DeleteIcon fontSize="small" />
-                      </IconButton>
+                      {admin && (
+                        <>
+                          <IconButton size="small" onClick={() => handleEdit(dept)}>
+                            <EditIcon fontSize="small" />
+                          </IconButton>
+                          <IconButton size="small" onClick={() => setDeleteTarget(dept)}>
+                            <DeleteIcon fontSize="small" />
+                          </IconButton>
+                        </>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))

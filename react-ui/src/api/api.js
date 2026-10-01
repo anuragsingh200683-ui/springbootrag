@@ -1,13 +1,28 @@
 import axios from "axios";
+import { getToken, login } from "../auth/keycloak";
 
 const BASE_URL = process.env.REACT_APP_API_BASE_URL || "http://localhost:8090";
-const USERNAME = process.env.REACT_APP_API_USERNAME || "admin";
-const PASSWORD = process.env.REACT_APP_API_PASSWORD || "changeme";
 
 const apiClient = axios.create({
   baseURL: BASE_URL,
-  auth: { username: USERNAME, password: PASSWORD },
 });
+
+// Attach the Keycloak access token (refreshed if close to expiry) to every request.
+apiClient.interceptors.request.use(async (config) => {
+  config.headers.Authorization = `Bearer ${await getToken()}`;
+  return config;
+});
+
+// 401 means the token was rejected (e.g. session revoked in Keycloak) - log in again.
+apiClient.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      login();
+    }
+    return Promise.reject(error);
+  }
+);
 
 export function uploadDocument(file, onUploadProgress) {
   const formData = new FormData();

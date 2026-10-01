@@ -12,6 +12,7 @@ import EmployeeAutocomplete from '../common/EmployeeAutocomplete.jsx'
 import StatusChip from '../common/StatusChip.jsx'
 import LeaveApplyDialog from './LeaveApplyDialog.jsx'
 import LeaveDecisionDialog from './LeaveDecisionDialog.jsx'
+import { isAdmin } from '../../auth/keycloak.js'
 
 export default function LeavePage() {
   const [filterEmployee, setFilterEmployee] = useState(null)
@@ -24,6 +25,8 @@ export default function LeavePage() {
   const [applyOpen, setApplyOpen] = useState(false)
   const [decision, setDecision] = useState(null) // { leave, action }
   const [snackbar, setSnackbar] = useState(null)
+  // Approve/reject are ADMIN-only on the API; anyone signed in can apply.
+  const admin = isAdmin()
 
   const load = useCallback(() => {
     setLoading(true)
@@ -117,7 +120,7 @@ export default function LeavePage() {
                     </TableCell>
                     <TableCell><StatusChip status={leave.status} /></TableCell>
                     <TableCell align="right">
-                      {leave.status === 'PENDING' ? (
+                      {leave.status === 'PENDING' ? (admin ? (
                         <>
                           <Tooltip title="Approve">
                             <IconButton size="small" color="success" onClick={() => setDecision({ leave, action: 'approve' })}>
@@ -131,6 +134,8 @@ export default function LeavePage() {
                           </Tooltip>
                         </>
                       ) : (
+                        <Typography variant="caption" color="text.secondary">Pending approval</Typography>
+                      )) : (
                         <Typography variant="caption" color="text.secondary">
                           {leave.decidedBy ? `by ${leave.decidedBy}` : '-'}
                         </Typography>

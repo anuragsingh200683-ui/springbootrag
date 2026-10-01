@@ -23,6 +23,13 @@ body {
   margin-bottom: 4px;
 }
 
+.user-bar {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 12px;
+}
+
 .card {
   background: #fff;
   border: 1px solid #e2e4e8;
