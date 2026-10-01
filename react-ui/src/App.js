@@ -17,7 +17,7 @@ function App() {
       setDocuments(response.data);
       setLoadError(null);
     } catch (err) {
-      setLoadError("Could not load documents. Is the Spring Boot service running on port 8080?");
+      setLoadError("Could not load documents. Is the Spring Boot service running on port 8090?");
     }
   }, []);
 

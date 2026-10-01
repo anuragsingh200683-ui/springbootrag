@@ -17,7 +17,7 @@ export default function DocumentList({ documents, selectedDocumentId, onSelect, 
       onDeleted(doc.documentId);
     } catch (err) {
       const message =
-        err.response?.data?.message || "Delete failed. Is the Spring Boot service running on port 8080?";
+        err.response?.data?.message || "Delete failed. Is the Spring Boot service running on port 8090?";
       setError(message);
     } finally {
       setDeletingId(null);

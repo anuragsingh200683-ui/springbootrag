@@ -28,7 +28,7 @@ export default function UploadDocument({ onUploaded }) {
       setFile(null);
     } catch (err) {
       const message =
-        err.response?.data?.message || "Upload failed. Is the Spring Boot service running on port 8080?";
+        err.response?.data?.message || "Upload failed. Is the Spring Boot service running on port 8090?";
       setError(message);
     } finally {
       setUploading(false);

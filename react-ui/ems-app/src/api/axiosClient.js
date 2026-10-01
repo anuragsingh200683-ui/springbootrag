@@ -2,7 +2,7 @@ import axios from 'axios'
 import { getToken, login } from '../auth/keycloak.js'
 
 // baseURL is relative - the Vite dev server proxy (vite.config.js) forwards
-// /api/** to springboot-service on :8080. In production this is served behind
+// /api/** to springboot-service on :8090. In production this is served behind
 // the same origin as the API, or VITE_API_BASE_URL can be set at build time.
 const axiosClient = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || '/api/ems',
