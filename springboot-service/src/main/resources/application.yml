@@ -89,6 +89,13 @@ app:
     demo:
       # Only consulted when the 'saga-demo' profile is active.
       seed-data: true
+    compensation:
+      # Retries apply only to transient database/connection errors.
+      max-attempts: 3
+      # Wait before retry n is backoff * n.
+      backoff: 150ms
+      # Total retry time for one compensation run; after that, each remaining step gets one attempt.
+      retry-budget: 2s
 
 management:
   endpoints:

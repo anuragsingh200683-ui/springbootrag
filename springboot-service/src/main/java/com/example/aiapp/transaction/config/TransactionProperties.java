@@ -4,6 +4,7 @@ import lombok.Getter;
 import lombok.Setter;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
+import java.time.Duration;
 import java.util.LinkedHashSet;
 import java.util.Set;
 
@@ -20,6 +21,7 @@ public class TransactionProperties {
 
     private Shipping shipping = new Shipping();
     private Demo demo = new Demo();
+    private Compensation compensation = new Compensation();
 
     @Getter
     @Setter
@@ -38,5 +40,23 @@ public class TransactionProperties {
          * Ignored unless the {@code saga-demo} profile is active.
          */
         private boolean seedData = true;
+    }
+
+    @Getter
+    @Setter
+    public static class Compensation {
+
+        /** How many times to try one compensating action before giving up on it. Values below 1 are treated as 1. */
+        private int maxAttempts = 3;
+
+        /** Wait before retry n is {@code backoff * n}: 150ms, then 300ms with the defaults. */
+        private Duration backoff = Duration.ofMillis(150);
+
+        /**
+         * Total time one compensation run may spend before it stops retrying. Once it is used up,
+         * each remaining compensating action still gets exactly one attempt. This keeps a full
+         * database outage from multiplying the connection-timeout wait by {@code maxAttempts}.
+         */
+        private Duration retryBudget = Duration.ofSeconds(2);
     }
 }
